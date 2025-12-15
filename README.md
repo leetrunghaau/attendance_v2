@@ -285,21 +285,6 @@ graph TD
 
 ```
 
-### 6. Technology Stack Diagram
-
-```mermaid
-graph LR
-    subgraph Docker Network: at2_network
-        FE_container[Frontend Container:3000]
-        BE_container[Backend Container:5000]
-        AI_container[AI Service Container:8000]
-        DB_container[Database Volume]
-    end
-    FE_container --> BE_container
-    BE_container --> AI_container
-    BE_container --> DB_container
-
-```
 
 ## Technology Stack
 
