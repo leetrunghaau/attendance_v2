@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:13-alpine
+    container_name: at2_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - at2_network
+
+  # AI Service (AT_AI)
+  at-ai:
+    build:
+      context: ./AT_AI
+      dockerfile: Dockerfile
+    container_name: at-ai
+    restart: unless-stopped
+    volumes:
+      - ./AT_AI/models:/app/models # Mount models directory
+      - ./AT_AI/face.index:/app/face.index # Persist Faiss index
+      - ./AT_AI/face_ids.json:/app/face_ids.json # Persist user IDs
+    env_file:
+      - ./AT_AI/.env # Load environment variables from AT_AI/.env
+    networks:
+      - at2_network
+    # Expose port if you need to access it directly from host, otherwise internal network is enough
+    # ports:
+    #   - "8000:8000"
+
+  # Backend Service (AT_BE)
+  at-be:
+    build:
+      context: ./AT_BE
+      dockerfile: Dockerfile
+    container_name: at-be
+    restart: unless-stopped
+    env_file:
+      - ./AT_BE/.env # Load environment variables from AT_BE/.env
+    volumes:
+      # Persist SQLite DB if used, or other data
+      - ./AT_BE/dev.db:/app/dev.db
+      - ./AT_BE/public/data:/app/public/data
+    networks:
+      - at2_network
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db # Depends on the database service
+      - at-ai # Depends on the AI service
+    command: npm run start # Use 'npm run start' for production-like environment
+
+  # Frontend Service (AT_FE)
+  at-fe:
+    build:
+      context: ./AT_FE
+      dockerfile: Dockerfile
+    container_name: at-fe-prod
+    command: npm start # Use 'npm start' for production build
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./AT_FE/.env.local # Load environment variables from AT_FE/.env.local
+    networks:
+      - at2_network
+    depends_on:
+      - at-be # Depends on the backend service
+
+volumes:
+  db_data: # Volume for PostgreSQL data persistence
+
+networks:
+  at2_network:
+    driver: bridge
